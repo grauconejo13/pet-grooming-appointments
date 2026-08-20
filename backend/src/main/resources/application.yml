@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: pet-grooming-api
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/pet_grooming}
+    username: ${DB_USERNAME:pet_grooming}
+    password: ${DB_PASSWORD:pet_grooming}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+
+server:
+  port: ${PORT:8080}
+
