@@ -40,3 +40,23 @@ The database schema is created by Flyway at application startup.
 
 Payments, authentication, public hosting, and the React client are intentionally out of scope for the first milestone.
 
+## Current API
+
+The first resource is grooming services. With the API running locally:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/services` | Create a bookable grooming service |
+| `GET` | `/api/services` | List services |
+| `GET` | `/api/services/{id}` | View one service |
+
+Example request for `POST /api/services`:
+
+```json
+{
+  "name": "Full Groom",
+  "description": "Bath, brush, haircut, and nail trim.",
+  "durationMinutes": 90,
+  "price": 65.00
+}
+```
