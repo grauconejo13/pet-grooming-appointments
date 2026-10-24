@@ -1,22 +1,26 @@
 package com.petgrooming.appointments.appointment;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
 class AppointmentStatusTest {
 
     @Test
-    void exposesExpectedStatuses() {
-        assertEquals(AppointmentStatus.PENDING, AppointmentStatus.valueOf("PENDING"));
-        assertEquals(AppointmentStatus.CONFIRMED, AppointmentStatus.valueOf("CONFIRMED"));
-        assertEquals(AppointmentStatus.COMPLETED, AppointmentStatus.valueOf("COMPLETED"));
-        assertEquals(AppointmentStatus.CANCELLED, AppointmentStatus.valueOf("CANCELLED"));
+    void allowsExpectedForwardTransitions() {
+        assertTrue(AppointmentStatus.PENDING.canTransitionTo(AppointmentStatus.CONFIRMED));
+        assertTrue(AppointmentStatus.PENDING.canTransitionTo(AppointmentStatus.CANCELLED));
+        assertTrue(AppointmentStatus.CONFIRMED.canTransitionTo(AppointmentStatus.COMPLETED));
+        assertTrue(AppointmentStatus.CONFIRMED.canTransitionTo(AppointmentStatus.CANCELLED));
     }
 
     @Test
-    void rejectsUnknownStatus() {
-        assertThrows(IllegalArgumentException.class, () -> AppointmentStatus.valueOf("UNKNOWN"));
+    void rejectsBackwardSameAndTerminalTransitions() {
+        assertFalse(AppointmentStatus.CONFIRMED.canTransitionTo(AppointmentStatus.PENDING));
+        assertFalse(AppointmentStatus.PENDING.canTransitionTo(AppointmentStatus.PENDING));
+        assertFalse(AppointmentStatus.COMPLETED.canTransitionTo(AppointmentStatus.CONFIRMED));
+        assertFalse(AppointmentStatus.CANCELLED.canTransitionTo(AppointmentStatus.PENDING));
+        assertFalse(AppointmentStatus.PENDING.canTransitionTo(null));
     }
 }
