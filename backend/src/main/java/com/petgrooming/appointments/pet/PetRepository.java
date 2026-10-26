@@ -3,6 +3,7 @@ package com.petgrooming.appointments.pet;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -37,6 +38,15 @@ public class PetRepository {
             pet.size(),
             pet.careNotes()
         );
+    }
+
+    public Optional<Pet> findById(long id) {
+        List<Pet> pets = jdbcTemplate.query(
+            "SELECT id, client_id, name, species, breed, birth_date, size, care_notes FROM pets WHERE id = ?",
+            this::mapPet,
+            id
+        );
+        return pets.stream().findFirst();
     }
 
     public List<Pet> findByClientId(long clientId) {
