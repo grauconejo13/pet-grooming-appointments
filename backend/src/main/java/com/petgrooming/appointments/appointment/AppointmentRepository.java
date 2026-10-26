@@ -52,6 +52,14 @@ public class AppointmentRepository {
         return appointments.stream().findFirst();
     }
 
+    public int updateStatus(long id, AppointmentStatus status) {
+        return jdbcTemplate.update(
+            "UPDATE appointments SET status = ? WHERE id = ?",
+            status.name(),
+            id
+        );
+    }
+
     public List<Appointment> findByGroomerBetween(
         long groomerId,
         LocalDateTime windowStart,
