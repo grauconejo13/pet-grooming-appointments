@@ -1,6 +1,7 @@
 package com.petgrooming.appointments.appointment;
 
 import java.util.List;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -26,6 +27,10 @@ public class AppointmentService {
         }
 
         return appointmentRepository.save(appointment);
+    }
+
+    public Optional<Appointment> findById(long appointmentId) {
+        return appointmentRepository.findById(appointmentId);
     }
 
     public Appointment transitionStatus(long appointmentId, AppointmentStatus nextStatus) {

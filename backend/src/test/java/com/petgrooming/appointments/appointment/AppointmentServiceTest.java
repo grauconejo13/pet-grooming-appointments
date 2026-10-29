@@ -1,6 +1,7 @@
 package com.petgrooming.appointments.appointment;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -9,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class AppointmentServiceTest {
@@ -48,6 +50,17 @@ class AppointmentServiceTest {
         service.create(appointment);
 
         verify(repository).save(appointment);
+    }
+
+    @Test
+    void findsAppointmentById() {
+        Appointment existing = appointment(42L, AppointmentStatus.CONFIRMED);
+        when(repository.findById(42L)).thenReturn(Optional.of(existing));
+
+        Optional<Appointment> result = service.findById(42L);
+
+        assertTrue(result.isPresent());
+        assertEquals(42L, result.orElseThrow().id());
     }
 
     private Appointment appointment(Long id, AppointmentStatus status) {
