@@ -7,8 +7,8 @@ import java.net.URI;
 import java.time.LocalDateTime;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -53,6 +53,20 @@ public class AppointmentController {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "appointment not found"));
     }
 
+    @PatchMapping("/{id}/status")
+    public Appointment updateStatus(
+        @PathVariable @Positive long id,
+        @Valid @RequestBody UpdateStatusRequest request
+    ) {
+        try {
+            return appointmentService.transitionStatus(id, request.status());
+        } catch (IllegalArgumentException notFound) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, notFound.getMessage(), notFound);
+        } catch (IllegalStateException invalidTransition) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, invalidTransition.getMessage(), invalidTransition);
+        }
+    }
+
     public record CreateAppointmentRequest(
         @NotNull @Positive Long petId,
         @NotNull @Positive Long groomerId,
@@ -61,4 +75,6 @@ public class AppointmentController {
         @NotNull LocalDateTime endsAt,
         String clientNote
     ) {}
+
+    public record UpdateStatusRequest(@NotNull AppointmentStatus status) {}
 }
