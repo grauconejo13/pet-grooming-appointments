@@ -1,5 +1,6 @@
 package com.petgrooming.appointments.appointment;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,17 @@ public class AppointmentService {
 
     public Optional<Appointment> findById(long appointmentId) {
         return appointmentRepository.findById(appointmentId);
+    }
+
+    public List<Appointment> findByGroomerBetween(
+        long groomerId,
+        LocalDateTime from,
+        LocalDateTime to
+    ) {
+        if (from == null || to == null || !to.isAfter(from)) {
+            throw new IllegalArgumentException("to must be after from");
+        }
+        return appointmentRepository.findByGroomerBetween(groomerId, from, to);
     }
 
     public Appointment transitionStatus(long appointmentId, AppointmentStatus nextStatus) {

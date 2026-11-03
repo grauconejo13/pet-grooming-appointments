@@ -1,12 +1,13 @@
 package com.petgrooming.appointments.appointment;
 
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -22,6 +23,29 @@ class AppointmentControllerTest {
 
     @MockBean
     private AppointmentService appointmentService;
+
+    @Test
+    void listsAppointmentsForGroomerWindow() throws Exception {
+        LocalDateTime from = LocalDateTime.of(2026, 11, 3, 9, 0);
+        LocalDateTime to = LocalDateTime.of(2026, 11, 3, 17, 0);
+        Appointment appointment = new Appointment(
+            42L, 10L, 20L, 30L, from.plusHours(1), from.plusHours(2),
+            AppointmentStatus.CONFIRMED, null, null
+        );
+
+        when(appointmentService.findByGroomerBetween(20L, from, to))
+            .thenReturn(List.of(appointment));
+
+        mockMvc.perform(
+            get("/api/appointments")
+                .param("groomerId", "20")
+                .param("from", "2026-11-03T09:00:00")
+                .param("to", "2026-11-03T17:00:00")
+        )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].id").value(42))
+            .andExpect(jsonPath("$[0].groomerId").value(20));
+    }
 
     @Test
     void updatesAppointmentStatus() throws Exception {
