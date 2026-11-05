@@ -196,3 +196,141 @@ footer span:first-child { display: inline-flex; align-items: center; gap: 7px; c
   font-family: 'Fraunces', serif;
   font-size: 1.08rem;
 }
+
+.appointment-lookup {
+  margin: 24px 0 90px;
+  padding: clamp(28px, 5vw, 54px);
+  border: 1px solid #ddd5cc;
+  border-radius: 38px;
+  background: rgba(255, 255, 255, 0.58);
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  gap: 52px;
+}
+
+.lookup-copy h2 {
+  font-size: clamp(2.2rem, 4vw, 4rem);
+  margin: 12px 0 18px;
+}
+
+.lookup-copy p {
+  color: #777168;
+  line-height: 1.65;
+  max-width: 430px;
+}
+
+.lookup-card {
+  background: #fff;
+  border-radius: 26px;
+  padding: 24px;
+  display: grid;
+  gap: 18px;
+  box-shadow: 0 16px 36px rgba(70, 64, 55, 0.08);
+}
+
+.lookup-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.lookup-form label {
+  display: grid;
+  gap: 8px;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.lookup-form input {
+  width: 100%;
+  border: 1px solid #d8d1c7;
+  border-radius: 14px;
+  padding: 13px 14px;
+  background: #fff;
+}
+
+.appointment-result {
+  border-top: 1px solid #ece6de;
+  padding-top: 18px;
+  display: grid;
+  gap: 18px;
+}
+
+.result-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: start;
+}
+
+.result-heading small,
+.result-heading strong {
+  display: block;
+}
+
+.result-heading strong {
+  margin-top: 4px;
+  font-family: 'Fraunces', serif;
+  font-size: 1.35rem;
+}
+
+.appointment-result dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.appointment-result dl > div {
+  background: #f8f5f0;
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.appointment-result dt {
+  color: #857d73;
+  font-size: 0.75rem;
+}
+
+.appointment-result dd {
+  margin: 4px 0 0;
+  font-weight: 700;
+}
+
+.danger-button {
+  justify-self: start;
+  border: 1px solid #d5a29a;
+  background: #fff8f6;
+  color: #7c3c31;
+  border-radius: 999px;
+  padding: 11px 15px;
+  font-weight: 700;
+}
+
+.danger-button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.status-cancelled {
+  background: #eee7e2;
+  color: #655d56;
+}
+
+@media (max-width: 850px) {
+  .appointment-lookup {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+}
+
+@media (max-width: 560px) {
+  .lookup-form {
+    grid-template-columns: 1fr;
+  }
+
+  .appointment-result dl {
+    grid-template-columns: 1fr;
+  }
+}

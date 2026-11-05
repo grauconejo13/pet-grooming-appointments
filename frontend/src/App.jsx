@@ -13,8 +13,10 @@ import {
   createAppointment,
   createClient,
   createPet,
+  getAppointment,
   getGroomers,
   getServices,
+  updateAppointmentStatus,
   hasApi
 } from './api';
 
@@ -86,6 +88,9 @@ export default function App() {
   const [time, setTime] = useState('10:30');
   const [bookingState, setBookingState] = useState({ status: 'idle', message: '' });
   const [profileState, setProfileState] = useState({ status: 'idle', message: '' });
+  const [appointmentLookupId, setAppointmentLookupId] = useState('');
+  const [lookupState, setLookupState] = useState({ status: 'idle', message: '' });
+  const [foundAppointment, setFoundAppointment] = useState(null);
   const [petName, setPetName] = useState('');
   const [clientForm, setClientForm] = useState({
     firstName: '',
@@ -125,6 +130,48 @@ export default function App() {
     () => groomers.find((item) => item.id === selectedGroomer) ?? groomers[0],
     [groomers, selectedGroomer]
   );
+
+  async function handleAppointmentLookup(event) {
+    event.preventDefault();
+
+    if (!hasApi()) {
+      setLookupState({
+        status: 'error',
+        message: 'Connect the backend API to look up a live appointment.'
+      });
+      return;
+    }
+
+    if (!appointmentLookupId) {
+      setLookupState({ status: 'error', message: 'Enter an appointment number first.' });
+      return;
+    }
+
+    setLookupState({ status: 'loading', message: 'Looking up your appointment…' });
+
+    try {
+      const appointment = await getAppointment(appointmentLookupId);
+      setFoundAppointment(appointment);
+      setLookupState({ status: 'success', message: 'Appointment found.' });
+    } catch (error) {
+      setFoundAppointment(null);
+      setLookupState({ status: 'error', message: error.message });
+    }
+  }
+
+  async function handleCancelAppointment() {
+    if (!foundAppointment) return;
+
+    setLookupState({ status: 'loading', message: 'Cancelling appointment…' });
+
+    try {
+      const updated = await updateAppointmentStatus(foundAppointment.id, 'CANCELLED');
+      setFoundAppointment(updated);
+      setLookupState({ status: 'success', message: 'Appointment cancelled.' });
+    } catch (error) {
+      setLookupState({ status: 'error', message: error.message });
+    }
+  }
 
   async function handleProfileSubmit(event) {
     event.preventDefault();
@@ -220,7 +267,7 @@ export default function App() {
         <div className="nav-links">
           <a href="#services">Services</a>
           <a href="#booking">Book</a>
-          <button type="button" className="ghost-button">My appointments</button>
+          <a href="#my-appointments" className="ghost-button">My appointments</a>
         </div>
       </nav>
 
@@ -490,6 +537,94 @@ export default function App() {
             </small>
           )}
         </form>
+      </section>
+
+      <section className="appointment-lookup" id="my-appointments">
+        <div className="lookup-copy">
+          <span className="eyebrow"><CalendarDays size={15} /> My appointments</span>
+          <h2>Find a booking by confirmation number.</h2>
+          <p>
+            Enter the appointment number from your booking confirmation to review
+            its time and current status.
+          </p>
+        </div>
+
+        <div className="lookup-card">
+          <form className="lookup-form" onSubmit={handleAppointmentLookup}>
+            <label>
+              Appointment number
+              <input
+                type="number"
+                min="1"
+                value={appointmentLookupId}
+                onChange={(event) => setAppointmentLookupId(event.target.value)}
+                placeholder="e.g. 42"
+                required
+              />
+            </label>
+            <button
+              type="submit"
+              className="primary-button"
+              disabled={lookupState.status === 'loading'}
+            >
+              {lookupState.status === 'loading' ? 'Checking…' : 'Find appointment'}
+            </button>
+          </form>
+
+          {foundAppointment && (
+            <div className="appointment-result">
+              <div className="result-heading">
+                <div>
+                  <small>Appointment #{foundAppointment.id}</small>
+                  <strong>{foundAppointment.status}</strong>
+                </div>
+                <span className={`status-pill status-${foundAppointment.status.toLowerCase()}`}>
+                  {foundAppointment.status}
+                </span>
+              </div>
+
+              <dl>
+                <div>
+                  <dt>Starts</dt>
+                  <dd>{new Date(foundAppointment.startsAt).toLocaleString()}</dd>
+                </div>
+                <div>
+                  <dt>Pet</dt>
+                  <dd>#{foundAppointment.petId}</dd>
+                </div>
+                <div>
+                  <dt>Groomer</dt>
+                  <dd>#{foundAppointment.groomerId}</dd>
+                </div>
+                <div>
+                  <dt>Service</dt>
+                  <dd>#{foundAppointment.serviceId}</dd>
+                </div>
+              </dl>
+
+              {['PENDING', 'CONFIRMED'].includes(foundAppointment.status) && (
+                <button
+                  type="button"
+                  className="danger-button"
+                  onClick={handleCancelAppointment}
+                  disabled={lookupState.status === 'loading'}
+                >
+                  Cancel appointment
+                </button>
+              )}
+            </div>
+          )}
+
+          {lookupState.message && lookupState.status !== 'idle' && (
+            <p
+              className={`form-feedback ${lookupState.status}`}
+              role={lookupState.status === 'error' ? 'alert' : 'status'}
+            >
+              {lookupState.status === 'success' && <CheckCircle2 size={16} />}
+              {lookupState.message}
+            </p>
+          )}
+        </div>
       </section>
 
       <footer>

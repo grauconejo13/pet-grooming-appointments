@@ -59,3 +59,14 @@ export function createPet(payload) {
     body: JSON.stringify(payload)
   });
 }
+
+export function getAppointment(id) {
+  return request(`/api/appointments/${id}`);
+}
+
+export function updateAppointmentStatus(id, status) {
+  return request(`/api/appointments/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status })
+  });
+}
