@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import {
   createAppointment,
+  createClient,
+  createPet,
   getGroomers,
   getServices,
   hasApi
@@ -83,6 +85,17 @@ export default function App() {
   const [date, setDate] = useState('');
   const [time, setTime] = useState('10:30');
   const [bookingState, setBookingState] = useState({ status: 'idle', message: '' });
+  const [profileState, setProfileState] = useState({ status: 'idle', message: '' });
+  const [petName, setPetName] = useState('');
+  const [clientForm, setClientForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    species: 'Dog',
+    breed: '',
+    size: 'Small'
+  });
 
   useEffect(() => {
     if (!hasApi()) return;
@@ -112,6 +125,49 @@ export default function App() {
     () => groomers.find((item) => item.id === selectedGroomer) ?? groomers[0],
     [groomers, selectedGroomer]
   );
+
+  async function handleProfileSubmit(event) {
+    event.preventDefault();
+
+    if (!hasApi()) {
+      setProfileState({
+        status: 'error',
+        message: 'Connect the backend API before creating a real client and pet.'
+      });
+      return;
+    }
+
+    setProfileState({ status: 'loading', message: 'Creating your pet profile…' });
+
+    try {
+      const client = await createClient({
+        firstName: clientForm.firstName,
+        lastName: clientForm.lastName,
+        email: clientForm.email,
+        phone: clientForm.phone
+      });
+
+      const pet = await createPet({
+        clientId: client.id,
+        name: petName,
+        species: clientForm.species,
+        breed: clientForm.breed || null,
+        birthDate: null,
+        size: clientForm.size,
+        careNotes: null
+      });
+
+      setPetId(String(pet.id));
+      setProfileState({
+        status: 'success',
+        message: `${pet.name} is ready to book. Pet #${pet.id} is selected below.`
+      });
+
+      document.querySelector('#booking')?.scrollIntoView({ behavior: 'smooth' });
+    } catch (error) {
+      setProfileState({ status: 'error', message: error.message });
+    }
+  }
 
   async function handleBooking(event) {
     event.preventDefault();
@@ -233,6 +289,123 @@ export default function App() {
         </div>
       </section>
 
+      <section className="onboarding-panel" id="pet-profile">
+        <div className="section-heading onboarding-heading">
+          <div>
+            <span className="eyebrow"><PawPrint size={15} /> New client</span>
+            <h2>Tell us who is arriving.</h2>
+          </div>
+          <p>Create the owner and pet records once, then carry the pet straight into booking.</p>
+        </div>
+
+        <form className="profile-card" onSubmit={handleProfileSubmit}>
+          <div className="form-row">
+            <label>
+              First name
+              <input
+                value={clientForm.firstName}
+                onChange={(event) => setClientForm({ ...clientForm, firstName: event.target.value })}
+                required
+              />
+            </label>
+            <label>
+              Last name
+              <input
+                value={clientForm.lastName}
+                onChange={(event) => setClientForm({ ...clientForm, lastName: event.target.value })}
+                required
+              />
+            </label>
+          </div>
+
+          <div className="form-row">
+            <label>
+              Email
+              <input
+                type="email"
+                value={clientForm.email}
+                onChange={(event) => setClientForm({ ...clientForm, email: event.target.value })}
+                required
+              />
+            </label>
+            <label>
+              Phone
+              <input
+                value={clientForm.phone}
+                onChange={(event) => setClientForm({ ...clientForm, phone: event.target.value })}
+                required
+              />
+            </label>
+          </div>
+
+          <div className="profile-divider"><span>Pet details</span></div>
+
+          <div className="form-row">
+            <label>
+              Pet name
+              <input
+                value={petName}
+                onChange={(event) => setPetName(event.target.value)}
+                placeholder="Mochi"
+                required
+              />
+            </label>
+            <label>
+              Species
+              <select
+                value={clientForm.species}
+                onChange={(event) => setClientForm({ ...clientForm, species: event.target.value })}
+              >
+                <option>Dog</option>
+                <option>Cat</option>
+                <option>Other</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="form-row">
+            <label>
+              Breed
+              <input
+                value={clientForm.breed}
+                onChange={(event) => setClientForm({ ...clientForm, breed: event.target.value })}
+                placeholder="Optional"
+              />
+            </label>
+            <label>
+              Size
+              <select
+                value={clientForm.size}
+                onChange={(event) => setClientForm({ ...clientForm, size: event.target.value })}
+              >
+                <option>Small</option>
+                <option>Medium</option>
+                <option>Large</option>
+                <option>Extra Large</option>
+              </select>
+            </label>
+          </div>
+
+          <button
+            type="submit"
+            className="primary-button wide"
+            disabled={profileState.status === 'loading'}
+          >
+            {profileState.status === 'loading' ? 'Creating profile…' : 'Create client & pet'}
+          </button>
+
+          {profileState.message && (
+            <p
+              className={`form-feedback ${profileState.status}`}
+              role={profileState.status === 'error' ? 'alert' : 'status'}
+            >
+              {profileState.status === 'success' && <CheckCircle2 size={16} />}
+              {profileState.message}
+            </p>
+          )}
+        </form>
+      </section>
+
       <section className="booking-panel" id="booking">
         <div className="booking-intro">
           <span className="eyebrow"><CalendarDays size={15} /> Book online</span>
@@ -264,17 +437,11 @@ export default function App() {
             </select>
           </label>
 
-          <label>
-            Pet ID
-            <input
-              type="number"
-              min="1"
-              value={petId}
-              onChange={(event) => setPetId(event.target.value)}
-              placeholder="e.g. 7"
-              required
-            />
-          </label>
+          <div className="selected-pet">
+            <span>Pet</span>
+            <strong>{petName || 'Create a pet profile above'}</strong>
+            <small>{petId ? `Pet #${petId} selected` : 'No pet selected yet'}</small>
+          </div>
 
           <div className="form-row">
             <label>

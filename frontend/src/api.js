@@ -45,3 +45,17 @@ export function createAppointment(payload) {
     body: JSON.stringify(payload)
   });
 }
+
+export function createClient(payload) {
+  return request('/api/clients', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export function createPet(payload) {
+  return request('/api/pets', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
