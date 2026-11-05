@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   CalendarDays,
+  CheckCircle2,
   Clock3,
   Heart,
   PawPrint,
@@ -8,8 +9,12 @@ import {
   ShieldCheck,
   Sparkles
 } from 'lucide-react';
-
-const apiBase = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '');
+import {
+  createAppointment,
+  getGroomers,
+  getServices,
+  hasApi
+} from './api';
 
 const demoServices = [
   {
@@ -51,25 +56,38 @@ function money(value) {
   }).format(value);
 }
 
+function addMinutes(localDateTime, minutes) {
+  const date = new Date(localDateTime);
+  date.setMinutes(date.getMinutes() + minutes);
+  const pad = (value) => String(value).padStart(2, '0');
+  return [
+    date.getFullYear(),
+    '-',
+    pad(date.getMonth() + 1),
+    '-',
+    pad(date.getDate()),
+    'T',
+    pad(date.getHours()),
+    ':',
+    pad(date.getMinutes()),
+    ':00'
+  ].join('');
+}
+
 export default function App() {
   const [services, setServices] = useState(demoServices);
   const [groomers, setGroomers] = useState(demoGroomers);
   const [selectedService, setSelectedService] = useState(1);
   const [selectedGroomer, setSelectedGroomer] = useState(1);
+  const [petId, setPetId] = useState('');
+  const [date, setDate] = useState('');
+  const [time, setTime] = useState('10:30');
+  const [bookingState, setBookingState] = useState({ status: 'idle', message: '' });
 
   useEffect(() => {
-    if (!apiBase) return;
+    if (!hasApi()) return;
 
-    Promise.all([
-      fetch(`${apiBase}/api/services`).then((response) => {
-        if (!response.ok) throw new Error('services unavailable');
-        return response.json();
-      }),
-      fetch(`${apiBase}/api/groomers`).then((response) => {
-        if (!response.ok) throw new Error('groomers unavailable');
-        return response.json();
-      })
-    ])
+    Promise.all([getServices(), getGroomers()])
       .then(([serviceData, groomerData]) => {
         if (serviceData.length) {
           setServices(serviceData);
@@ -94,6 +112,44 @@ export default function App() {
     () => groomers.find((item) => item.id === selectedGroomer) ?? groomers[0],
     [groomers, selectedGroomer]
   );
+
+  async function handleBooking(event) {
+    event.preventDefault();
+
+    if (!hasApi()) {
+      setBookingState({
+        status: 'error',
+        message: 'Preview mode is active. Add VITE_API_BASE_URL in Vercel to send real bookings.'
+      });
+      return;
+    }
+
+    if (!petId || !date || !time || !service) {
+      setBookingState({ status: 'error', message: 'Choose a pet, date, and time first.' });
+      return;
+    }
+
+    const startsAt = `${date}T${time}:00`;
+    setBookingState({ status: 'loading', message: 'Reserving your appointment…' });
+
+    try {
+      const appointment = await createAppointment({
+        petId: Number(petId),
+        groomerId: selectedGroomer,
+        serviceId: selectedService,
+        startsAt,
+        endsAt: addMinutes(startsAt, service.durationMinutes),
+        clientNote: null
+      });
+
+      setBookingState({
+        status: 'success',
+        message: `Appointment #${appointment.id} is booked and pending confirmation.`
+      });
+    } catch (error) {
+      setBookingState({ status: 'error', message: error.message });
+    }
+  }
 
   return (
     <main className="page-shell">
@@ -179,11 +235,11 @@ export default function App() {
 
       <section className="booking-panel" id="booking">
         <div className="booking-intro">
-          <span className="eyebrow"><CalendarDays size={15} /> Booking preview</span>
+          <span className="eyebrow"><CalendarDays size={15} /> Book online</span>
           <h2>Build your visit.</h2>
           <p>
-            This first frontend commit is preview-ready. When a backend URL is
-            configured, the service and groomer choices load from the Spring API.
+            Choose a groomer and time, then send the appointment directly to
+            the Spring booking API.
           </p>
 
           <div className="booking-summary">
@@ -193,7 +249,7 @@ export default function App() {
           </div>
         </div>
 
-        <div className="booking-card">
+        <form className="booking-card" onSubmit={handleBooking}>
           <label>
             Groomer
             <select
@@ -208,34 +264,65 @@ export default function App() {
             </select>
           </label>
 
+          <label>
+            Pet ID
+            <input
+              type="number"
+              min="1"
+              value={petId}
+              onChange={(event) => setPetId(event.target.value)}
+              placeholder="e.g. 7"
+              required
+            />
+          </label>
+
           <div className="form-row">
             <label>
               Date
-              <input type="date" />
+              <input
+                type="date"
+                value={date}
+                onChange={(event) => setDate(event.target.value)}
+                required
+              />
             </label>
             <label>
               Time
-              <select defaultValue="10:30">
-                <option>09:00</option>
-                <option>10:30</option>
-                <option>13:00</option>
-                <option>15:30</option>
+              <select value={time} onChange={(event) => setTime(event.target.value)}>
+                <option value="09:00">09:00</option>
+                <option value="10:30">10:30</option>
+                <option value="13:00">13:00</option>
+                <option value="15:30">15:30</option>
               </select>
             </label>
           </div>
 
-          <label>
-            Pet name
-            <input type="text" placeholder="Mochi" />
-          </label>
-
-          <button type="button" className="primary-button wide">
-            Continue with {groomer?.firstName ?? 'groomer'}
+          <button
+            type="submit"
+            className="primary-button wide"
+            disabled={bookingState.status === 'loading'}
+          >
+            {bookingState.status === 'loading'
+              ? 'Booking…'
+              : `Book with ${groomer?.firstName ?? 'groomer'}`}
           </button>
-          <small className="form-note">
-            Preview mode only. Submission wiring comes in the next frontend milestone.
-          </small>
-        </div>
+
+          {bookingState.message && (
+            <p
+              className={`form-feedback ${bookingState.status}`}
+              role={bookingState.status === 'error' ? 'alert' : 'status'}
+            >
+              {bookingState.status === 'success' && <CheckCircle2 size={16} />}
+              {bookingState.message}
+            </p>
+          )}
+
+          {!hasApi() && (
+            <small className="form-note">
+              Preview mode is active until VITE_API_BASE_URL points to the Spring API.
+            </small>
+          )}
+        </form>
       </section>
 
       <footer>
