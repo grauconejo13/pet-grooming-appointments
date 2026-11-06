@@ -45,6 +45,50 @@ public class AppointmentService {
         return appointmentRepository.findByGroomerBetween(groomerId, from, to);
     }
 
+    public Appointment reschedule(long appointmentId, LocalDateTime startsAt, LocalDateTime endsAt) {
+        if (startsAt == null || endsAt == null || !endsAt.isAfter(startsAt)) {
+            throw new IllegalArgumentException("endsAt must be after startsAt");
+        }
+
+        Appointment existing = appointmentRepository.findById(appointmentId)
+            .orElseThrow(() -> new IllegalArgumentException("appointment not found"));
+
+        if (existing.status() == AppointmentStatus.CANCELLED || existing.status() == AppointmentStatus.COMPLETED) {
+            throw new IllegalStateException("completed or cancelled appointments cannot be rescheduled");
+        }
+
+        boolean hasActiveConflict = appointmentRepository.findByGroomerBetween(
+                existing.groomerId(),
+                startsAt,
+                endsAt
+            ).stream()
+            .anyMatch(other ->
+                other.id() != appointmentId &&
+                other.status() != AppointmentStatus.CANCELLED
+            );
+
+        if (hasActiveConflict) {
+            throw new IllegalStateException("groomer is not available for the requested time");
+        }
+
+        int updatedRows = appointmentRepository.updateSchedule(appointmentId, startsAt, endsAt);
+        if (updatedRows != 1) {
+            throw new IllegalStateException("appointment schedule update failed");
+        }
+
+        return new Appointment(
+            existing.id(),
+            existing.petId(),
+            existing.groomerId(),
+            existing.serviceId(),
+            startsAt,
+            endsAt,
+            existing.status(),
+            existing.clientNote(),
+            existing.groomerNote()
+        );
+    }
+
     public Appointment transitionStatus(long appointmentId, AppointmentStatus nextStatus) {
         Appointment existing = appointmentRepository.findById(appointmentId)
             .orElseThrow(() -> new IllegalArgumentException("appointment not found"));

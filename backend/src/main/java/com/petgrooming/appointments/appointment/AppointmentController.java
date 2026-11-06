@@ -69,6 +69,23 @@ public class AppointmentController {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "appointment not found"));
     }
 
+    @PatchMapping("/{id}/schedule")
+    public Appointment reschedule(
+        @PathVariable @Positive long id,
+        @Valid @RequestBody RescheduleRequest request
+    ) {
+        try {
+            return appointmentService.reschedule(id, request.startsAt(), request.endsAt());
+        } catch (IllegalArgumentException invalid) {
+            if ("appointment not found".equals(invalid.getMessage())) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, invalid.getMessage(), invalid);
+            }
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, invalid.getMessage(), invalid);
+        } catch (IllegalStateException conflict) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, conflict.getMessage(), conflict);
+        }
+    }
+
     @PatchMapping("/{id}/status")
     public Appointment updateStatus(
         @PathVariable @Positive long id,
@@ -90,6 +107,11 @@ public class AppointmentController {
         @NotNull LocalDateTime startsAt,
         @NotNull LocalDateTime endsAt,
         String clientNote
+    ) {}
+
+    public record RescheduleRequest(
+        @NotNull LocalDateTime startsAt,
+        @NotNull LocalDateTime endsAt
     ) {}
 
     public record UpdateStatusRequest(@NotNull AppointmentStatus status) {}

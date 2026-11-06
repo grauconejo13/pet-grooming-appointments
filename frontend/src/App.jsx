@@ -16,6 +16,7 @@ import {
   getAppointment,
   getGroomers,
   getServices,
+  rescheduleAppointment,
   updateAppointmentStatus,
   hasApi
 } from './api';
@@ -91,6 +92,8 @@ export default function App() {
   const [appointmentLookupId, setAppointmentLookupId] = useState('');
   const [lookupState, setLookupState] = useState({ status: 'idle', message: '' });
   const [foundAppointment, setFoundAppointment] = useState(null);
+  const [rescheduleDate, setRescheduleDate] = useState('');
+  const [rescheduleTime, setRescheduleTime] = useState('10:30');
   const [petName, setPetName] = useState('');
   const [clientForm, setClientForm] = useState({
     firstName: '',
@@ -152,9 +155,35 @@ export default function App() {
     try {
       const appointment = await getAppointment(appointmentLookupId);
       setFoundAppointment(appointment);
+      setRescheduleDate(appointment.startsAt.slice(0, 10));
+      setRescheduleTime(appointment.startsAt.slice(11, 16));
       setLookupState({ status: 'success', message: 'Appointment found.' });
     } catch (error) {
       setFoundAppointment(null);
+      setLookupState({ status: 'error', message: error.message });
+    }
+  }
+
+  async function handleRescheduleAppointment(event) {
+    event.preventDefault();
+    if (!foundAppointment || !rescheduleDate || !rescheduleTime) return;
+
+    const startsAt = `${rescheduleDate}T${rescheduleTime}:00`;
+    const durationMinutes =
+      Math.round(
+        (new Date(foundAppointment.endsAt) - new Date(foundAppointment.startsAt)) / 60000
+      ) || 60;
+
+    setLookupState({ status: 'loading', message: 'Checking the new time…' });
+
+    try {
+      const updated = await rescheduleAppointment(foundAppointment.id, {
+        startsAt,
+        endsAt: addMinutes(startsAt, durationMinutes)
+      });
+      setFoundAppointment(updated);
+      setLookupState({ status: 'success', message: 'Appointment rescheduled.' });
+    } catch (error) {
       setLookupState({ status: 'error', message: error.message });
     }
   }
@@ -603,14 +632,50 @@ export default function App() {
               </dl>
 
               {['PENDING', 'CONFIRMED'].includes(foundAppointment.status) && (
-                <button
-                  type="button"
-                  className="danger-button"
-                  onClick={handleCancelAppointment}
-                  disabled={lookupState.status === 'loading'}
-                >
-                  Cancel appointment
-                </button>
+                <>
+                  <form className="reschedule-form" onSubmit={handleRescheduleAppointment}>
+                    <strong>Need a different time?</strong>
+                    <div className="form-row">
+                      <label>
+                        New date
+                        <input
+                          type="date"
+                          value={rescheduleDate}
+                          onChange={(event) => setRescheduleDate(event.target.value)}
+                          required
+                        />
+                      </label>
+                      <label>
+                        New time
+                        <select
+                          value={rescheduleTime}
+                          onChange={(event) => setRescheduleTime(event.target.value)}
+                        >
+                          <option value="09:00">09:00</option>
+                          <option value="10:30">10:30</option>
+                          <option value="13:00">13:00</option>
+                          <option value="15:30">15:30</option>
+                        </select>
+                      </label>
+                    </div>
+                    <button
+                      type="submit"
+                      className="secondary-button"
+                      disabled={lookupState.status === 'loading'}
+                    >
+                      Reschedule
+                    </button>
+                  </form>
+
+                  <button
+                    type="button"
+                    className="danger-button"
+                    onClick={handleCancelAppointment}
+                    disabled={lookupState.status === 'loading'}
+                  >
+                    Cancel appointment
+                  </button>
+                </>
               )}
             </div>
           )}

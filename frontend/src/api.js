@@ -70,3 +70,10 @@ export function updateAppointmentStatus(id, status) {
     body: JSON.stringify({ status })
   });
 }
+
+export function rescheduleAppointment(id, payload) {
+  return request(`/api/appointments/${id}/schedule`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload)
+  });
+}

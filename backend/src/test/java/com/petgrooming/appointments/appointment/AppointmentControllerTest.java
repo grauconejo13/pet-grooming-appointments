@@ -48,18 +48,36 @@ class AppointmentControllerTest {
     }
 
     @Test
+    void reschedulesAppointment() throws Exception {
+        LocalDateTime startsAt = LocalDateTime.of(2026, 11, 8, 13, 0);
+        LocalDateTime endsAt = startsAt.plusMinutes(90);
+        Appointment updated = new Appointment(
+            42L, 10L, 20L, 30L, startsAt, endsAt,
+            AppointmentStatus.CONFIRMED, null, null
+        );
+
+        when(appointmentService.reschedule(42L, startsAt, endsAt)).thenReturn(updated);
+
+        mockMvc.perform(
+            patch("/api/appointments/42/schedule")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "startsAt": "2026-11-08T13:00:00",
+                      "endsAt": "2026-11-08T14:30:00"
+                    }
+                    """)
+        )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.startsAt").value("2026-11-08T13:00:00"));
+    }
+
+    @Test
     void updatesAppointmentStatus() throws Exception {
         LocalDateTime startsAt = LocalDateTime.of(2026, 10, 30, 10, 0);
         Appointment confirmed = new Appointment(
-            42L,
-            10L,
-            20L,
-            30L,
-            startsAt,
-            startsAt.plusMinutes(60),
-            AppointmentStatus.CONFIRMED,
-            null,
-            null
+            42L, 10L, 20L, 30L, startsAt, startsAt.plusMinutes(60),
+            AppointmentStatus.CONFIRMED, null, null
         );
 
         when(appointmentService.transitionStatus(42L, AppointmentStatus.CONFIRMED))

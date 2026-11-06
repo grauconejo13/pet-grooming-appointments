@@ -60,6 +60,15 @@ public class AppointmentRepository {
         );
     }
 
+    public int updateSchedule(long id, LocalDateTime startsAt, LocalDateTime endsAt) {
+        return jdbcTemplate.update(
+            "UPDATE appointments SET starts_at = ?, ends_at = ? WHERE id = ?",
+            startsAt,
+            endsAt,
+            id
+        );
+    }
+
     public List<Appointment> findByGroomerBetween(
         long groomerId,
         LocalDateTime windowStart,
