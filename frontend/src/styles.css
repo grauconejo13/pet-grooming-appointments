@@ -373,3 +373,19 @@ footer span:first-child { display: inline-flex; align-items: center; gap: 7px; c
   opacity: 0.65;
   cursor: wait;
 }
+
+.booking-card .primary-button:disabled {
+  box-shadow: none;
+}
+
+.booking-card .primary-button:disabled:not(:active) {
+  background: #87968f;
+}
+
+input:invalid:not(:placeholder-shown) {
+  border-color: #c58b81;
+}
+
+.selected-pet:has(small:last-child) {
+  transition: border-color 160ms ease, background 160ms ease;
+}

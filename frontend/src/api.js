@@ -18,12 +18,25 @@ async function request(path, options = {}) {
   });
 
   if (!response.ok) {
+    let serverMessage = '';
+    try {
+      const body = await response.json();
+      serverMessage = body.detail || body.message || '';
+    } catch {
+      // Some error responses do not include JSON.
+    }
+
     const message =
       response.status === 409
-        ? 'That time is no longer available.'
+        ? serverMessage || 'That time is no longer available. Try another slot.'
         : response.status === 404
-          ? 'The requested record was not found.'
-          : 'Something went wrong. Please try again.';
+          ? 'We could not find that record. Check the confirmation number and try again.'
+          : response.status === 400
+            ? serverMessage || 'Some booking details are invalid. Check the form and try again.'
+            : response.status >= 500
+              ? 'The booking service is temporarily unavailable. Please try again.'
+              : serverMessage || 'Something went wrong. Please try again.';
+
     throw new Error(message);
   }
 

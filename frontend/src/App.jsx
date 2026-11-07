@@ -61,6 +61,11 @@ function money(value) {
   }).format(value);
 }
 
+function localDateValue(date = new Date()) {
+  const pad = (value) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 function addMinutes(localDateTime, minutes) {
   const date = new Date(localDateTime);
   date.setMinutes(date.getMinutes() + minutes);
@@ -134,6 +139,9 @@ export default function App() {
     [groomers, selectedGroomer]
   );
 
+  const minimumDate = localDateValue();
+  const bookingReady = Boolean(petId && date && time && service && groomer);
+
   async function handleAppointmentLookup(event) {
     event.preventDefault();
 
@@ -169,6 +177,15 @@ export default function App() {
     if (!foundAppointment || !rescheduleDate || !rescheduleTime) return;
 
     const startsAt = `${rescheduleDate}T${rescheduleTime}:00`;
+
+    if (new Date(startsAt) <= new Date()) {
+      setLookupState({
+        status: 'error',
+        message: 'Choose a future date and time for the appointment.'
+      });
+      return;
+    }
+
     const durationMinutes =
       Math.round(
         (new Date(foundAppointment.endsAt) - new Date(foundAppointment.startsAt)) / 60000
@@ -262,6 +279,15 @@ export default function App() {
     }
 
     const startsAt = `${date}T${time}:00`;
+
+    if (new Date(startsAt) <= new Date()) {
+      setBookingState({
+        status: 'error',
+        message: 'Choose a future appointment time.'
+      });
+      return;
+    }
+
     setBookingState({ status: 'loading', message: 'Reserving your appointment…' });
 
     try {
@@ -525,13 +551,23 @@ export default function App() {
               <input
                 type="date"
                 value={date}
-                onChange={(event) => setDate(event.target.value)}
+                min={minimumDate}
+                onChange={(event) => {
+                  setDate(event.target.value);
+                  setBookingState({ status: 'idle', message: '' });
+                }}
                 required
               />
             </label>
             <label>
               Time
-              <select value={time} onChange={(event) => setTime(event.target.value)}>
+              <select
+                value={time}
+                onChange={(event) => {
+                  setTime(event.target.value);
+                  setBookingState({ status: 'idle', message: '' });
+                }}
+              >
                 <option value="09:00">09:00</option>
                 <option value="10:30">10:30</option>
                 <option value="13:00">13:00</option>
@@ -543,11 +579,15 @@ export default function App() {
           <button
             type="submit"
             className="primary-button wide"
-            disabled={bookingState.status === 'loading'}
+            disabled={bookingState.status === 'loading' || !bookingReady}
           >
             {bookingState.status === 'loading'
               ? 'Booking…'
-              : `Book with ${groomer?.firstName ?? 'groomer'}`}
+              : !petId
+                ? 'Create a pet profile first'
+                : !date
+                  ? 'Choose a date'
+                  : `Book with ${groomer?.firstName ?? 'groomer'}`}
           </button>
 
           {bookingState.message && (
@@ -641,6 +681,7 @@ export default function App() {
                         <input
                           type="date"
                           value={rescheduleDate}
+                          min={minimumDate}
                           onChange={(event) => setRescheduleDate(event.target.value)}
                           required
                         />
