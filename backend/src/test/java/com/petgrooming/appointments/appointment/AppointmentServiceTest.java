@@ -1,8 +1,8 @@
 package com.petgrooming.appointments.appointment;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -61,6 +61,118 @@ class AppointmentServiceTest {
 
         assertTrue(result.isPresent());
         assertEquals(42L, result.orElseThrow().id());
+    }
+
+    @Test
+    void reschedulesAvailableAppointment() {
+        Appointment existing = appointment(42L, AppointmentStatus.CONFIRMED);
+        LocalDateTime newStart = existing.startsAt().plusDays(2).plusHours(3);
+        LocalDateTime newEnd = newStart.plusMinutes(60);
+
+        when(repository.findById(42L)).thenReturn(Optional.of(existing));
+        when(repository.findByGroomerBetween(20L, newStart, newEnd)).thenReturn(List.of());
+        when(repository.updateSchedule(42L, newStart, newEnd)).thenReturn(1);
+
+        Appointment updated = service.reschedule(42L, newStart, newEnd);
+
+        assertEquals(newStart, updated.startsAt());
+        assertEquals(newEnd, updated.endsAt());
+        verify(repository).updateSchedule(42L, newStart, newEnd);
+    }
+
+    @Test
+    void ignoresCurrentAppointmentDuringRescheduleConflictCheck() {
+        Appointment existing = appointment(42L, AppointmentStatus.CONFIRMED);
+        LocalDateTime newStart = existing.startsAt().plusHours(2);
+        LocalDateTime newEnd = newStart.plusMinutes(60);
+
+        when(repository.findById(42L)).thenReturn(Optional.of(existing));
+        when(repository.findByGroomerBetween(20L, newStart, newEnd))
+            .thenReturn(List.of(existing));
+        when(repository.updateSchedule(42L, newStart, newEnd)).thenReturn(1);
+
+        service.reschedule(42L, newStart, newEnd);
+
+        verify(repository).updateSchedule(42L, newStart, newEnd);
+    }
+
+    @Test
+    void rejectsRescheduleWhenAnotherActiveAppointmentConflicts() {
+        Appointment existing = appointment(42L, AppointmentStatus.CONFIRMED);
+        Appointment conflict = appointment(77L, AppointmentStatus.PENDING);
+        LocalDateTime newStart = existing.startsAt().plusHours(2);
+        LocalDateTime newEnd = newStart.plusMinutes(60);
+
+        when(repository.findById(42L)).thenReturn(Optional.of(existing));
+        when(repository.findByGroomerBetween(20L, newStart, newEnd))
+            .thenReturn(List.of(conflict));
+
+        assertThrows(
+            IllegalStateException.class,
+            () -> service.reschedule(42L, newStart, newEnd)
+        );
+        verify(repository, never()).updateSchedule(42L, newStart, newEnd);
+    }
+
+    @Test
+    void ignoresCancelledAppointmentDuringRescheduleConflictCheck() {
+        Appointment existing = appointment(42L, AppointmentStatus.CONFIRMED);
+        Appointment cancelled = appointment(77L, AppointmentStatus.CANCELLED);
+        LocalDateTime newStart = existing.startsAt().plusHours(2);
+        LocalDateTime newEnd = newStart.plusMinutes(60);
+
+        when(repository.findById(42L)).thenReturn(Optional.of(existing));
+        when(repository.findByGroomerBetween(20L, newStart, newEnd))
+            .thenReturn(List.of(cancelled));
+        when(repository.updateSchedule(42L, newStart, newEnd)).thenReturn(1);
+
+        service.reschedule(42L, newStart, newEnd);
+
+        verify(repository).updateSchedule(42L, newStart, newEnd);
+    }
+
+    @Test
+    void rejectsReschedulingCancelledAppointment() {
+        Appointment cancelled = appointment(42L, AppointmentStatus.CANCELLED);
+        LocalDateTime newStart = cancelled.startsAt().plusDays(1);
+        LocalDateTime newEnd = newStart.plusMinutes(60);
+
+        when(repository.findById(42L)).thenReturn(Optional.of(cancelled));
+
+        assertThrows(
+            IllegalStateException.class,
+            () -> service.reschedule(42L, newStart, newEnd)
+        );
+        verify(repository, never()).updateSchedule(42L, newStart, newEnd);
+    }
+
+    @Test
+    void rejectsReschedulingCompletedAppointment() {
+        Appointment completed = appointment(42L, AppointmentStatus.COMPLETED);
+        LocalDateTime newStart = completed.startsAt().plusDays(1);
+        LocalDateTime newEnd = newStart.plusMinutes(60);
+
+        when(repository.findById(42L)).thenReturn(Optional.of(completed));
+
+        assertThrows(
+            IllegalStateException.class,
+            () -> service.reschedule(42L, newStart, newEnd)
+        );
+        verify(repository, never()).updateSchedule(42L, newStart, newEnd);
+    }
+
+    @Test
+    void rejectsInvalidRescheduleWindow() {
+        Appointment existing = appointment(42L, AppointmentStatus.CONFIRMED);
+        LocalDateTime newStart = existing.startsAt().plusDays(1);
+
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> service.reschedule(42L, newStart, newStart)
+        );
+
+        verify(repository, never()).findById(42L);
+        verify(repository, never()).updateSchedule(42L, newStart, newStart);
     }
 
     private Appointment appointment(Long id, AppointmentStatus status) {
