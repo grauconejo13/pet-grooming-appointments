@@ -28,13 +28,35 @@ A booking system for a small pet-grooming business. The Java/Spring Boot API man
 
 Without `VITE_API_BASE_URL`, the UI uses preview data so Vercel deployments remain visually testable before the API is publicly hosted.
 
-## Vercel preview
+## Deploy the frontend to Vercel
 
-Import this repository into Vercel and set the project **Root Directory** to `frontend`. Vite's default build settings are sufficient.
+Import this repository into Vercel and set the project **Root Directory** to `frontend`.
 
-When the backend is deployed, add:
+Vite's default build settings are sufficient. Once the backend is public, add:
 
 `VITE_API_BASE_URL=https://your-api-host.example`
+
+Redeploy the frontend after adding or changing that environment variable.
+
+## Deploy the API to Render
+
+The root `render.yaml` defines the Spring Boot web service. Create a Render Blueprint from this repository, then provide these environment variables:
+
+| Variable | Example / purpose |
+| --- | --- |
+| `DB_URL` | JDBC PostgreSQL URL, such as `jdbc:postgresql://host:5432/database` |
+| `DB_USERNAME` | PostgreSQL user |
+| `DB_PASSWORD` | PostgreSQL password |
+| `CORS_ALLOWED_ORIGIN` | Exact Vercel origin, such as `https://your-project.vercel.app` |
+
+Render builds from the `backend` directory with Maven and starts the packaged Spring Boot JAR. The health check is `/api/health`.
+
+After Render is live:
+
+1. Set Render's `CORS_ALLOWED_ORIGIN` to the production Vercel origin.
+2. Set Vercel's `VITE_API_BASE_URL` to the Render service URL.
+3. Redeploy both services when their corresponding environment variables change.
+4. Verify `GET /api/health`, then test client creation, pet creation, booking, lookup, rescheduling, and cancellation end to end.
 
 ## Core domain
 
