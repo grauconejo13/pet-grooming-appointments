@@ -11,6 +11,10 @@ public class GroomerService {
         this.repository = repository;
     }
 
+    public Groomer create(Groomer groomer) {
+        return repository.save(groomer);
+    }
+
     public List<Groomer> getActive() {
         return repository.findActive();
     }
