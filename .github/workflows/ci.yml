@@ -28,7 +28,7 @@ jobs:
         run: mvn test
 
   frontend:
-    name: Frontend build
+    name: Frontend tests and build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -45,6 +45,9 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+
+      - name: Run frontend smoke tests
+        run: npm test
 
       - name: Build frontend
         run: npm run build
