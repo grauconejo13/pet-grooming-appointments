@@ -11,6 +11,10 @@ public class GroomingCatalogService {
         this.repository = repository;
     }
 
+    public GroomingService create(GroomingService service) {
+        return repository.save(service);
+    }
+
     public List<GroomingService> getActive() {
         return repository.findActive();
     }
